@@ -26,23 +26,29 @@ import (
 )
 
 var (
-	descConfigMapInfo = prometheus.NewDesc(
+	//descConfigMapInfo = prometheus.NewDesc(
+	descConfigMapInfo = NewGaugeSwitchableMetric(
 		"kube_configmap_info",
 		"Information about configmap.",
 		[]string{"namespace", "configmap"}, nil,
 	)
 
-	descConfigMapCreated = prometheus.NewDesc(
+	//descConfigMapCreated = prometheus.NewDesc(
+	descConfigMapCreated = NewGaugeSwitchableMetric(
 		"kube_configmap_created",
 		"Unix creation timestamp",
 		[]string{"namespace", "configmap"}, nil,
 	)
 
-	descConfigMapMetadataResourceVersion = prometheus.NewDesc(
+	//descConfigMapMetadataResourceVersion = prometheus.NewDesc(
+	descConfigMapMetadataResourceVersion = NewGaugeSwitchableMetric(
 		"kube_configmap_metadata_resource_version",
 		"Resource version representing a specific version of the configmap.",
 		[]string{"namespace", "configmap", "resource_version"}, nil,
 	)
+
+	allowedMetrics = []string{"kube_configmap_info", "kube_configmap_created", "kube_configmap_metadata_resource_version"}
+	disabledMetrics = []string{}
 )
 
 type ConfigMapLister func() ([]v1.ConfigMap, error)
@@ -82,9 +88,14 @@ type configMapCollector struct {
 
 // Describe implements the prometheus.Collector interface.
 func (sc *configMapCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- descConfigMapInfo
-	ch <- descConfigMapCreated
-	ch <- descConfigMapMetadataResourceVersion
+	descConfigMapInfo.Switch(sc.opts.AllowedMetrics.Contains(descConfigMapInfo.Name()))
+	descConfigMapInfo.Describe(ch)
+
+	descConfigMapCreated.Switch(sc.opts.AllowedMetrics.Contains(descConfigMapCreated.Name()))
+	descConfigMapCreated.Describe(ch)
+
+	descConfigMapMetadataResourceVersion.Switch(sc.opts.AllowedMetrics.Contains(descConfigMapMetadataResourceVersion.Name()))
+	descConfigMapMetadataResourceVersion.Describe(ch)
 }
 
 // Collect implements the prometheus.Collector interface.
@@ -106,18 +117,15 @@ func (cmc *configMapCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (cmc *configMapCollector) collectConfigMap(ch chan<- prometheus.Metric, s v1.ConfigMap) {
-	addConstMetric := func(desc *prometheus.Desc, t prometheus.ValueType, v float64, lv ...string) {
-		lv = append([]string{s.Namespace, s.Name}, lv...)
-		ch <- prometheus.MustNewConstMetric(desc, t, v, lv...)
-	}
-	addGauge := func(desc *prometheus.Desc, v float64, lv ...string) {
-		addConstMetric(desc, prometheus.GaugeValue, v, lv...)
-	}
-	addGauge(descConfigMapInfo, 1)
+
+	addGauge(ch, descConfigMapInfo, 1, s.Namespace, s.Name)
+	//addGauge(descConfigMapInfo, 1)
 
 	if !s.CreationTimestamp.IsZero() {
-		addGauge(descConfigMapCreated, float64(s.CreationTimestamp.Unix()))
+		addGauge(ch, descConfigMapCreated, float64(s.CreationTimestamp.Unix()), s.Namespace, s.Name)
+		//addGauge(descConfigMapCreated, float64(s.CreationTimestamp.Unix()))
 	}
 
-	addGauge(descConfigMapMetadataResourceVersion, 1, string(s.ObjectMeta.ResourceVersion))
+	addGauge(ch, descConfigMapMetadataResourceVersion, 1, s.Namespace, s.Name, string(s.ObjectMeta.ResourceVersion))
+	//addGauge(descConfigMapMetadataResourceVersion, 1, string(s.ObjectMeta.ResourceVersion))
 }

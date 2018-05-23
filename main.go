@@ -91,6 +91,19 @@ func main() {
 		glog.Infof("Using %s namespaces", namespaces)
 	}
 
+	if len(opts.AllowedMetrics) == 0 {
+		opts.AllowedMetrics = options.DefaultAllowedMetrics
+		glog.Info("Using default metrics")
+	} else {
+		opts.AllowedMetrics = append(options.DefaultAllowedMetrics, opts.AllowedMetrics...)
+		glog.Infof("Using custom metrics %s", opts.AllowedMetrics)
+	}
+	if len(opts.DisabledMetrics) != 0 {
+		for _, m := range opts.DisabledMetrics {
+			opts.AllowedMetrics.Delete(m)
+		}
+	}
+
 	proc.StartReaper()
 
 	kubeClient, err := createKubeClient(opts.Apiserver, opts.Kubeconfig)

@@ -36,6 +36,8 @@ type Options struct {
 	Namespaces                          NamespaceList
 	Version                             bool
 	DisablePodNonGenericResourceMetrics bool
+	AllowedMetrics                      MetricList
+	DisabledMetrics                     MetricList
 
 	flags *pflag.FlagSet
 }
@@ -68,6 +70,8 @@ func (o *Options) AddFlags() {
 	o.flags.StringVar(&o.TelemetryHost, "telemetry-host", "0.0.0.0", `Host to expose kube-state-metrics self metrics on.`)
 	o.flags.Var(&o.Collectors, "collectors", fmt.Sprintf("Comma-separated list of collectors to be enabled. Defaults to %q", &DefaultCollectors))
 	o.flags.Var(&o.Namespaces, "namespace", fmt.Sprintf("Comma-separated list of namespaces to be enabled. Defaults to %q", &DefaultNamespaces))
+	o.flags.Var(&o.AllowedMetrics, "allow-metric", fmt.Sprintf("Comma-separated list of metrics to be exposed. Defaults to %q", &DefaultAllowedMetrics))
+	o.flags.Var(&o.DisabledMetrics, "disable-metric", fmt.Sprintf("Comma-separated list of metrics to not be exposed. Defaults to %q", &MetricList{}))
 	o.flags.BoolVarP(&o.Version, "version", "", false, "kube-state-metrics build version information")
 	o.flags.BoolVarP(&o.DisablePodNonGenericResourceMetrics, "disable-pod-non-generic-resource-metrics", "", false, "Disable pod non generic resource request and limit metrics")
 }

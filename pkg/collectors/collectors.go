@@ -144,3 +144,49 @@ func kubeAnnotationsToPrometheusAnnotations(annotations map[string]string) ([]st
 func sanitizeLabelName(s string) string {
 	return invalidLabelCharRE.ReplaceAllString(s, "_")
 }
+
+type swichableMetric interface {
+	Switch(bool)
+	On() bool
+	GetDesc() *prometheus.Desc
+}
+
+type GaugeSwitchableMetric struct {
+	name string
+	desc *prometheus.Desc
+	on   bool
+}
+
+func NewGaugeSwitchableMetric(fqName, help string, variableLabels []string, constLabels prometheus.Labels) *GaugeSwitchableMetric {
+	desc := prometheus.NewDesc(fqName, help, variableLabels, constLabels)
+
+	return &GaugeSwitchableMetric{fqName, desc, false}
+}
+
+func (g *GaugeSwitchableMetric) Switch(arg bool) {
+	g.on = arg
+}
+
+func (g *GaugeSwitchableMetric) On() bool {
+	return g.on
+}
+
+func (g *GaugeSwitchableMetric) Describe(ch chan<- *prometheus.Desc) {
+	if g.On() {
+		ch <- g.desc
+	}
+}
+
+func (g *GaugeSwitchableMetric) GetDesc() *prometheus.Desc {
+	return g.desc
+}
+
+func (g *GaugeSwitchableMetric) Name() string {
+	return g.name
+}
+
+func addGauge(ch chan<- prometheus.Metric, sm swichableMetric, v float64, lv ...string) {
+	if sm.On() {
+		ch <- prometheus.MustNewConstMetric(sm.GetDesc(), prometheus.GaugeValue, v, lv...)
+	}
+}

@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// CollectorSet
 type CollectorSet map[string]struct{}
 
 func (c *CollectorSet) String() string {
@@ -66,6 +67,7 @@ func (c *CollectorSet) Type() string {
 	return "string"
 }
 
+// NamespaceList
 type NamespaceList []string
 
 func (n *NamespaceList) String() string {
@@ -89,4 +91,46 @@ func (n *NamespaceList) Set(value string) error {
 
 func (n *NamespaceList) Type() string {
 	return "string"
+}
+
+// MetricList
+type MetricList []string
+
+func (ml *MetricList) String() string {
+	return strings.Join(*ml, ",")
+}
+
+func (ml *MetricList) Set(value string) error {
+	splittedMetrics := strings.Split(value, ",")
+	for _, metric := range splittedMetrics {
+		metric = strings.TrimSpace(metric)
+		if len(metric) != 0 {
+			*ml = append(*ml, metric)
+		}
+	}
+	return nil
+}
+
+func (ml *MetricList) Type() string {
+	return "string"
+}
+
+func (ml *MetricList) Contains(item string) bool {
+	return ml.Index(item) >= 0
+}
+
+func (ml *MetricList) Index(item string) int {
+	for i, a := range *ml {
+		if a == item {
+			return i
+		}
+	}
+	return -1
+}
+
+func (ml *MetricList) Delete(item string) {
+	index := ml.Index(item)
+	if index > 0 {
+		*ml = append(*ml[:index], *ml[index+1:]...)
+	}
 }
