@@ -94,10 +94,18 @@ func (n *NamespaceList) Type() string {
 }
 
 // MetricList
-type MetricList []string
+type MetricList map[string]bool
+
+func (ml *MetricList) AsSlice() []string {
+	slice := []string{}
+	for key := range *ml {
+		slice = append(slice, key)
+	}
+	return slice
+}
 
 func (ml *MetricList) String() string {
-	return strings.Join(*ml, ",")
+	return strings.Join(ml.AsSlice(), ",")
 }
 
 func (ml *MetricList) Set(value string) error {
@@ -105,7 +113,7 @@ func (ml *MetricList) Set(value string) error {
 	for _, metric := range splittedMetrics {
 		metric = strings.TrimSpace(metric)
 		if len(metric) != 0 {
-			*ml = append(*ml, metric)
+			(*ml)[metric] = true
 		}
 	}
 	return nil
@@ -116,21 +124,18 @@ func (ml *MetricList) Type() string {
 }
 
 func (ml *MetricList) Contains(item string) bool {
-	return ml.Index(item) >= 0
+	_, ok := (*ml)[item]
+	return ok
 }
 
-func (ml *MetricList) Index(item string) int {
-	for i, a := range *ml {
-		if a == item {
-			return i
-		}
+func (ml *MetricList) Append(otherMl *MetricList) {
+	for key, value := range *otherMl {
+		(*ml)[key] = value
 	}
-	return -1
 }
 
-func (ml *MetricList) Delete(item string) {
-	index := ml.Index(item)
-	if index > 0 {
-		*ml = append(*ml[:index], *ml[index+1:]...)
+func (ml *MetricList) Remove(list *MetricList) {
+	for key := range *list {
+		delete(*ml, key)
 	}
 }

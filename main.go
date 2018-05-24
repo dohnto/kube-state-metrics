@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 
+
 	"github.com/golang/glog"
 	"github.com/openshift/origin/pkg/util/proc"
 	"github.com/prometheus/client_golang/prometheus"
@@ -91,18 +92,13 @@ func main() {
 		glog.Infof("Using %s namespaces", namespaces)
 	}
 
-	if len(opts.AllowedMetrics) == 0 {
-		opts.AllowedMetrics = options.DefaultAllowedMetrics
-		glog.Info("Using default metrics")
-	} else {
-		opts.AllowedMetrics = append(options.DefaultAllowedMetrics, opts.AllowedMetrics...)
-		glog.Infof("Using custom metrics %s", opts.AllowedMetrics)
-	}
-	if len(opts.DisabledMetrics) != 0 {
-		for _, m := range opts.DisabledMetrics {
-			opts.AllowedMetrics.Delete(m)
-		}
-	}
+	metrics := options.MetricList{}
+	metrics.Append(&options.DefaultAllowedMetrics)
+	metrics.Remove(&options.DefaultDisabledMetrics)
+	metrics.Append(&opts.AllowedMetrics)
+	metrics.Remove(&opts.DisabledMetrics)
+	opts.AllowedMetrics = metrics
+	glog.Infof("Exposing metrics %s", opts.AllowedMetrics)
 
 	proc.StartReaper()
 
